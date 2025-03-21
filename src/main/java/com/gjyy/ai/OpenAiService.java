@@ -1,5 +1,6 @@
 package com.gjyy.ai;
 
+import com.gjyy.ai.ragflow.RagflowClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,14 +20,21 @@ public class OpenAiService {
     private static final Logger logger = LoggerFactory.getLogger(OpenAiService.class);
     private final OpenAiConfig openAiConfig;
     private final RestTemplate restTemplate;
+    private final RagflowClient ragflowClient;
 
     @Autowired
-    public OpenAiService(OpenAiConfig openAiConfig, RestTemplate restTemplate) {
+    public OpenAiService(OpenAiConfig openAiConfig, RestTemplate restTemplate, RagflowClient ragflowClient) {
         this.openAiConfig = openAiConfig;
         this.restTemplate = restTemplate;
+        this.ragflowClient = ragflowClient;
     }
 
     public String callChatApi(String prompt) {
+        String knowledge = "";//ragflowClient.searchKnowledgeBase();
+        String enhancedPrompt = "Knowledge: " + knowledge + "\nUser Query: " + prompt;
+        // 其余代码保持不变，使用 enhancedPrompt 调用大模型 API
+
+
         String apiUrl = openAiConfig.getApiUrl();
         String apiKey = openAiConfig.getApiKey();
         logger.info("API URL: {}", apiUrl);
