@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 对话页面</title>
+    <style>
+       /* 大模型选择框美化 */
+        #model-select {
+            width: 125px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            color: #333;
+            appearance: none;
+            /* background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); */
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            transition: border-color 0.2s;
+            flex-shrink: 0; /* 防止模型选择框被压缩 */
+            transform: translateY(13px); /* 向下移动 5px */
+        }
+         /* 发送按钮样式调整 */
+         #send-button {
+            padding: 8px 16px; /* 调整按钮内边距 */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px; /* 调整字体大小 */
+            flex-shrink: 0; /* 防止发送按钮被压缩 */
+            transform: translateY(13px); /* 向下移动 5px */
+        }
+
+        #model-select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        /* 固定标题栏 */
+        h1 {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: white;
+            padding: 20px;
+            margin: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        /* 输入框样式优化 */
+        #user-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            color: #333;
+            height: auto;
+            box-sizing: border-box; /* 确保 padding 和 border 不影响宽度 */
+            line-height: 1.5; /* 确保换行高度正确计算 */
+            overflow-wrap: break-word; /* 添加 overflow-wrap */
+            max-height: calc(1.5em * 5 + 16px); /* 限制最大 5 行高度 */
+            resize: none; /* 移除 resize 属性 */
+            flex-grow: 1; /* 允许输入框填充剩余空间 */
+            flex-basis: 60%; /* 设置输入框的基础宽度为 60% */
+            flex: 1;
+            max-width: 100%; /* 留出模型选择和按钮的空间 */
+        }
+        /* 将模型选择框和发送按钮放在同一行 */
+        .model-send-row {
+            display: flex;
+            justify-content: flex-end; /* 将模型选择框和发送按钮放在行尾 */
+            gap: 10px;
+            align-items: center; /* 垂直居中对齐 */
+        }
+        /* 调整模型选择框和发送按钮的样式，使其高度一致 */
+        #model-select, #send-button {
+            height: 38px; /* 设置固定高度，或者根据实际情况调整 */
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: stretch; /* 垂直方向拉伸对齐 */
+            width: 100%;
+        }
+        #user-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        /* 调整输入容器布局 */
+        .input-container {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            min-width: 500px;
+            background: white;
+            padding: 20px;
+            display: flex;
+            box-sizing: border-box;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+        }
+        .right-controls {
+            display: flex;
+            flex-direction: column; /* 垂直排列 */
+            gap: 10px;
+            align-items: stretch; /* 垂直方向拉伸对齐 */
+            transform: translateY(-13px); /* 调整这个值来控制上移的距离 */
+        }
+        /* 响应式调整 */
+        @media (max-width: 480px) {
+            #model-select {
+                width: 100px;
+                padding: 6px 8px;
+                font-size: 13px;
+            }
+            
+            #user-input {
+                font-size: 13px;
+                padding: 6px 10px;
+            }
+        }
+         /* 更专业的思考部分样式 */
+        .thinking {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            border-left: 4px solid #adb5bd;
+            font-size: 0.9em;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        /* 添加思考标签 */
+        .thinking::before {
+            content: "思考过程";
+            display: block;
+            font-weight: 500;
+            font-size: 0.8em;
+            color: #868e96;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 改进代码块样式 */
+        pre {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            position: relative;
+            border: 1px solid #dee2e6;
+        }
+
+        pre code {
+            font-family: 'JetBrains Mono', Consolas, Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+            background: none;
+            padding: 0;
+        }
+
+        /* 添加代码语言标签 */
+        pre::after {
+            content: attr(data-lang);
+            position: absolute;
+            right: 1rem;
+            top: 0.5rem;
+            font-size: 0.75em;
+            color: #868e96;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            /* max-width: 800px; */
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            background: #ffffff;
+            }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 80px 20px 120px; /* 留出顶部标题和底部输入框空间 */
+            margin: 0 auto;
+            width: 50%;
+            min-width: 500px;
+            max-width: 800px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            max-width: 70%;
+            width: fit-content;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto; /* 右侧对齐 */
+        }
+        .bot-message {
+            background-color: #f5f5f5;
+            margin-right: auto; /* 左侧对齐 */
+        }
+        
+        /* .input-container {
+            display: flex;
+            gap: 10px;
+        } */
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: Consolas, Monaco, 'Courier New', monospace;
+        }
+        .mathjax-container {
+            overflow-x: auto;
+        }
+        /* 加载动画样式 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 4px;
+            background-color: #007bff;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+    <!-- 引入 Markdown 渲染库 -->
+    <script src="static/js/marked.min.js"></script>
+    <!-- 引入代码高亮库 -->
+    <link rel="stylesheet" href="static/style/default.min.css">
+    <script src="static/js/highlight.min.js"></script>
+    <link rel="stylesheet" href="static/style/github.min.css">
+    <!-- 引入 MathJax 支持数学公式 -->
+    <script src="static/js/polyfill.min.js"></script>
+    <script id="MathJax-script" async src="static/js/tex-mml-chtml.js"></script>
+    <!-- <script data-embed-id="3aca18ad-1ab5-4ad5-a732-bc7ca3cecf60"
+    data-base-api-url="http://10.192.23.250:3001/api/embed"
+    src="http://10.192.23.250:3001/embed/anythingllm-chat-widget.min.js"></script> -->
+</head>
+<body>
+    <div class="container">
+        
+        <h1><span id="model-title">DeepSeek-70B</span></h1>
+        <div class="chat-container" id="chat-container"></div>
+        <div class="input-container">
+            <div class="input-row">
+                <textarea 
+                    id="user-input" 
+                    placeholder="输入你的问题..."
+                    onkeypress="enterToSend(event)"
+                    data-original-text=""
+                ></textarea>
+                <div class="right-controls">
+                    <select id="model-select">
+                        <option value="DeepSeek-70B">DeepSeek</option>
+                        <option value="ZP">智谱清言</option>
+                    </select>
+                    <button id="send-button" onclick="sendMessage()">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>    
+    function parseMarkdown(markdown) {
+            // XSS防护
+            // markdown = markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // 增强思考部分处理（支持多段落）
+            let thinkProcessed = false; // 标志变量，用于判断是否已经处理过思考部分
+            markdown = markdown.replace(/([\s\S]*?)(?=\s*<\/think>)/gi, (match, p1) => {
+                if (thinkProcessed) {
+                    return match; // 如果已经处理过，直接返回原始匹配项
+                }
+                // 处理内部换行和段落
+                const content = p1.trim().split(/\n{2,}/)  // 匹配两个及以上换行符作为段落分隔
+                .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`); // 保留单换行为<br>
+                const rst = `<div class="thinking">${content.join('')}</div>`;
+                // console.log("rst:", rst);
+                thinkProcessed = true; // 设置标志变量为 true
+                return rst;
+            });
+
+            // 改进的代码块处理（支持语言标识）
+            markdown = markdown.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                const language = lang || 'plaintext';
+                return `<pre data-lang="${language}"><code class="language-${language}">${code.trim()}</code></pre>`;
+            });
+            // 标题
+            markdown = markdown.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+            markdown = markdown.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+            markdown = markdown.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+
+            // 粗体
+            markdown = markdown.replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>');
+
+            // 斜体
+            markdown = markdown.replace(/\*(.*)\*/g, '<em>$1</em>');
+
+            // 链接
+            markdown = markdown.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+
+            // 无序列表
+            markdown = markdown.replace(/^\* (.*)$/gm, '<ul><li>$1</li></ul>');
+            markdown = markdown.replace(/<\/ul><ul>/g, ''); // 合并相邻的 <ul> 标签
+
+            // 段落
+            markdown = markdown.replace(/^([^#\*\[\n]+)$/gm, '<p>$1</p>'); // 匹配不以 # * [ 开头的行
+             // 代码块
+            // markdown = markdown.replace(/`(\w*)\n([\s\S]*?)\n`/g, '<pre><code class="$1">$2</code></pre>');
+            
+            return markdown;
+        }
+        function parseMarkdownIng(markdown) {
+            // XSS防护
+            // markdown = markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // 增强思考部分处理（支持多段落）
+            // markdown = markdown.replace(/([\s\S]*?)(?=\s*<\/think>)/gi, (match, p1) => {
+            //     // 处理内部换行和段落
+            //     const content = p1.trim().split(/\n{2,}/)  // 匹配两个及以上换行符作为段落分隔
+            //     .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`); // 保留单换行为<br>
+            //     const rst = `<div class="thinking">${content.join('')}</div>`;
+            //     console.log("rst:", rst);
+            //     return rst;
+            // });
+
+            // 改进的代码块处理（支持语言标识）
+            markdown = markdown.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                const language = lang || 'plaintext';
+                return `<pre data-lang="${language}"><code class="language-${language}">${code.trim()}</code></pre>`;
+            });
+            // 标题
+            markdown = markdown.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+            markdown = markdown.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+            markdown = markdown.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+
+            // 粗体
+            markdown = markdown.replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>');
+
+            // 斜体
+            markdown = markdown.replace(/\*(.*)\*/g, '<em>$1</em>');
+
+            // 链接
+            markdown = markdown.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+
+            // 无序列表
+            markdown = markdown.replace(/^\* (.*)$/gm, '<ul><li>$1</li></ul>');
+            markdown = markdown.replace(/<\/ul><ul>/g, ''); // 合并相邻的 <ul> 标签
+
+            // 段落
+            markdown = markdown.replace(/^([^#\*\[\n]+)$/gm, '<p>$1</p>'); // 匹配不以 # * [ 开头的行
+             // 代码块
+            // markdown = markdown.replace(/`(\w*)\n([\s\S]*?)\n`/g, '<pre><code class="$1">$2</code></pre>');
+            
+            return markdown;
+        }
+
+    </script>
+    <script>
+        const modelSelect = document.getElementById('model-select');
+        const modelTitle = document.getElementById('model-title');
+        modelSelect.value = "DeepSeek-70B";
+        //初始化标题
+        modelTitle.textContent = "DeepSeek-70B";
+        
+
+        
+
+        // 添加事件监听器
+        modelSelect.addEventListener('change', function() {
+            if(modelSelect.value=='ZP'){
+                modelTitle.textContent = "智谱清言";
+            }else{
+                modelTitle.textContent = "DeepSeek-70B";
+            }
+        });
+        // window.addEventListener('load', () => {
+        sessionStorage.removeItem('dialogueHistory'); // 移除 dialogueHistory
+        // });
+        // 用于控制 fetch 请求
+        let controller = null; 
+        // 初始化代码高亮
+        hljs.highlightAll();
+        // 初始化用户ID (这里使用一个简单的随机数作为示例，你可以根据实际情况修改)
+        const userId = Math.random().toString(36).substring(2, 15);
+
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        //输入框处理
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const lineHeight = parseInt(window.getComputedStyle(this).lineHeight);
+            const maxHeight = lineHeight * 5; // 最大 5 行高度
+
+            this.style.height = Math.min(this.scrollHeight, maxHeight) + 'px';
+            // 自动滚动到底部（当内容超过可视区域时）
+            if (this.scrollHeight > maxHeight) {
+                this.scrollTop = this.scrollHeight;
+            }
+        });
+      
+        // 从 localStorage 加载对话历史
+        // let dialogueHistory = JSON.parse(localStorage.getItem('dialogueHistory')) || {};
+        // 从 sessionStorage 加载对话历史
+        let dialogueHistory = JSON.parse(sessionStorage.getItem('dialogueHistory')) || {}; // 使用 sessionStorage
+        
+        // 如果存在该用户的对话历史，则显示在聊天框中
+        if (dialogueHistory[userId]) {
+            dialogueHistory[userId].forEach(message => {
+                addMessage(message.content, message.role);
+            });
+        }
+        
+       
+        function sendMessage() {
+            const userInputVal  = document.getElementById('user-input').value;
+            if (!userInputVal.trim()) {
+                alert('请输入内容！');
+                return;
+            }
+            
+            // 保存用户输入的内容
+            document.getElementById('user-input').dataset.originalText = userInputVal ;
+            // 添加用户消息到页面
+            addMessage(userInputVal , 'user');
+            
+            dialogueHistory[userId] = dialogueHistory[userId] || [];
+            dialogueHistory[userId].push({ role: 'user', content: userInputVal });
+
+            // 添加等待动画，并记录其 ID
+            const waitingId = addMessage('', 'bot', true);
+            // 切换按钮状态为停止
+            const sendButton = document.getElementById('send-button');
+            sendButton.textContent = '停止';
+            sendButton.onclick = stopMessage;
+            //按钮设置为红色背景
+            sendButton.style.backgroundColor = '#dc3545';
+            // 创建新的 AbortController
+            controller = new AbortController();
+            const signal = controller.signal;
+            //新加的begin
+            const chatContainer = document.getElementById('chat-container');
+            const waitingMessage = document.getElementById(waitingId);
+          
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_id: userId, user_input: userInputVal,dialogue_history: dialogueHistory[userId],model:modelSelect.value }),
+                signal: signal,
+            })
+            .then(response => {
+                const reader = response.body.getReader();
+                let botMessageContent = ""; // 用于累积机器人消息内容
+
+                return new ReadableStream({
+                start(controller) {
+                function push() {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            controller.close();
+                            dialogueHistory[userId].push({ role: 'assistant', content: botMessageContent });
+                            // 将更新后的对话历史存储回 sessionStorage
+                            sessionStorage.setItem('dialogueHistory', JSON.stringify(dialogueHistory)); // 使用 sessionStorage
+                            // 流式数据接收完成，进行最终的 Markdown 渲染和代码高亮
+                            try {
+                                // console.log("botMessageContent:", botMessageContent);
+                                const renderedContent_1 = parseMarkdown(botMessageContent);
+                                // console.log("renderedContent_1:", renderedContent_1);
+
+                                // const renderedContent_1 = marked.parse(botMessageContent);
+                                replaceMessage(waitingId, renderedContent_1, 'bot');
+                            } catch (error) {
+                                console.error("marked.parse 报错:", error);
+                                // replaceMessage(waitingId, botMessageContent, 'bot');
+                                const renderedContent_2 = parseMarkdown(botMessageContent);
+                                replaceMessage(waitingId, renderedContent_2, 'bot');
+                            }
+                            return;
+                        }
+                        const chunkText = new TextDecoder().decode(value);
+                        try {
+                            // SSE 数据格式解析
+                            const lines = chunkText.split('\n\n');
+                            lines.forEach(line => {
+                                if (line.startsWith('data: ')) {
+                                    const jsonData = JSON.parse(line.substring(5));
+                                    const chunkResult = jsonData.result || "";
+                                    botMessageContent += chunkResult; // 累加内容
+                                    try {
+                                        // console.log("waitingMessage.innerHTML:", botMessageContent);
+                                        waitingMessage.innerHTML = parseMarkdown(botMessageContent)
+                                        // waitingMessage.innerHTML = marked.parse(botMessageContent) //botMessageContent; // 实时更新显示 (简单追加，可以根据需要优化)
+                                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                                    } catch (error) {
+                                        console.error("marked.parse 报错:", error);
+                                        waitingMessage.innerHTML = parseMarkdownIng(botMessageContent) //botMessageContent; // 实时更新显示 (简单追加，可以根据需要优化)
+                                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                                    }
+                                }
+                            });
+                            } catch (e) {
+                                if (error.name === 'AbortError') {
+                                    // 用户点击了停止按钮
+                                    replaceMessage(waitingId, '已停止输出', 'bot');
+                                } else {
+                                    controller.error(e);
+                                    replaceMessage(waitingId, 'JSON 解析错误:'+error, 'bot');
+                                }
+                                // console.error("JSON 解析错误", e, chunkText);
+                                //controller.error(e); // 传递错误到 stream
+                            }
+                            push(); // 继续读取下一个 chunk
+                        }).catch(error => {
+                            if (error.name === 'AbortError') {
+                                // 用户点击了停止按钮
+                                replaceMessage(waitingId, '已停止输出', 'bot');
+                            } else {
+                                controller.error(error);
+                                replaceMessage(waitingId, error, 'bot');
+                            }
+                            
+                        // 可以考虑显示错误信息在聊天框，例如 replaceMessage(waitingId, 'Error: 网络连接错误', 'bot');
+                        });
+                }
+
+                push();
+                }
+            });
+            })
+           
+            .catch(error => {
+                if (error.name === 'AbortError') {
+                    // 用户点击了停止按钮
+                    replaceMessage(waitingId, '已停止输出', 'bot');
+                } else {
+                    console.error("Fetch 请求错误", error);
+                    replaceMessage(waitingId, '错误：请检查网络连接:'+error, 'bot');
+                }
+            })
+            // .finally(() => {
+            //     // 请求完成（包括正常结束和取消），重置按钮状态
+            //     resetButton();
+            // })
+            ;
+
+            // 清空输入框
+            document.getElementById('user-input').value = '';
+            //新加的end
+            
+        }
+        function stopMessage() {
+            if (controller) {
+                controller.abort(); // 取消 fetch 请求
+                const sendButton = document.getElementById('send-button');
+                sendButton.textContent = '发送';
+                sendButton.onclick = sendMessage;
+                 //按钮设置为蓝色背景
+                sendButton.style.backgroundColor = '#007bff';
+                document.getElementById('user-input').value =  document.getElementById('user-input').dataset.originalText;
+        }}
+        function enterToSend(event) {
+            if (event.keyCode === 13 && !event.altKey) {
+                event.preventDefault(); // 阻止默认的换行行为
+                event.stopPropagation(); // 阻止事件冒泡
+                sendMessage();
+                return false;
+            } else if (event.keyCode === 13 && event.altKey) {
+                // 如果是 Alt + Enter，允许默认的换行行为
+                return true;
+            }
+            return true; // 允许其他按键的默认行为
+        }
+        function resetButton() {
+            const sendButton = document.getElementById('send-button');
+            sendButton.textContent = '发送';
+            sendButton.onclick = sendMessage;
+             //按钮设置为蓝色背景
+             sendButton.style.backgroundColor = '#007bff';
+            controller = null; // 重置 controller
+        }
+        function addMessage(content, sender, isWaiting = false) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+
+            if (isWaiting) {
+                // 如果是等待动画，添加一个唯一的 ID 以便后续替换
+                messageDiv.id = `waiting-${Date.now()}`;
+                messageDiv.innerHTML = `
+                    <div class="loading">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                `;
+            } else if (sender === 'bot') {
+                // 如果是 AI 返回的内容，逐个字符输出
+                messageDiv.id = `message-${Date.now()}`;
+                messageDiv.textContent = ''; // 先清空内容
+            } else {
+                // 用户消息直接显示文本
+                messageDiv.textContent = content;
+            }
+
+            chatContainer.appendChild(messageDiv);
+            // 滚动到最底部
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // 返回消息元素的 ID，方便后续替换
+            return messageDiv.id;
+        }
+
+        function replaceMessage(messageId, content, sender) {
+            const messageDiv = document.getElementById(messageId);
+            if (messageDiv) {
+                messageDiv.className = `message ${sender}-message`;
+                messageDiv.innerHTML = content; // 设置最终内容 (Markdown 渲染后的 HTML)
+
+                // 输出完成后，重新高亮代码块
+                document.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightBlock(block);
+                });
+                // 渲染数学公式
+                MathJax.typeset();
+            }
+            if (sender === 'bot') {
+                resetButton();
+            }
+        }
+    </script>
+</body>
+</html>
