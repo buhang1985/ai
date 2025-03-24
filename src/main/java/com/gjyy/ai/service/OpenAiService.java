@@ -1,5 +1,6 @@
-package com.gjyy.ai;
+package com.gjyy.ai.service;
 
+import com.gjyy.ai.OpenAiConfig;
 import com.gjyy.ai.ragflow.RagflowClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
